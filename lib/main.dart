@@ -203,7 +203,7 @@ class ExchangeRateProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http.get(Uri.parse('https://api.frankfurter.app/latest'));
+      final response = await http.get(Uri.parse('https://api.frankfurter.dev/v1/latest'));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         _rates = (data['rates'] as Map<String, dynamic>).map((key, value) => MapEntry(key, value.toDouble()));
@@ -214,7 +214,7 @@ class ExchangeRateProvider with ChangeNotifier {
         _errorMessage = 'Failed to load exchange rates: ${response.statusCode}';
       }
     } catch (e) {
-      _errorMessage = 'Error fetching exchange rates: $e';
+      _errorMessage = 'Error fetching exchange rates. Please check your connection and try again.';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -360,7 +360,7 @@ class _HomePageState extends State<HomePage> {
     return Padding(
       padding: const EdgeInsets.only(top: 16.0),
       child: Text(
-        'Disclaimer: All rates are for informational purposes only. Exchange rates are based on market data from frankfurter.app and do not represent guaranteed rates from any financial institution.',
+        'Disclaimer: All rates are for informational purposes only. Exchange rates are based on market data from frankfurter.dev and do not represent guaranteed rates from any financial institution.',
         textAlign: TextAlign.center,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
       ),
@@ -451,7 +451,23 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildCurrencyDropdown(BuildContext context, String label, String value, List<String> items, ValueChanged<String?> onChanged) {
-    // Ensure the value exists in the item list, otherwise default to a valid item.
+    if (items.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: Theme.of(context).textTheme.labelLarge),
+          const SizedBox(height: 4),
+          DropdownButton<String>(
+            value: null,
+            underline: const SizedBox(),
+            isExpanded: true,
+            onChanged: (_) {},
+            hint: const Text('Loading...'),
+            items: const [],
+          ),
+        ],
+      );
+    }
     final dropdownValue = items.contains(value) ? value : items.first;
 
     return Column(
