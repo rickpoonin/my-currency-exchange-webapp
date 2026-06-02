@@ -1,6 +1,8 @@
 # Flutter Exchange Rate App
 
-This is a robust Flutter Web application designed to display real-time USD exchange rates to EUR, GBP and JPY. It also simulates bank comparison rates by applying random spreads and includes theme support to toggle between Light and Dark Modes.
+An open-source Flutter Web application that provides real-time currency exchange information and serves as a foundation for future AI-powered travel planning capabilities.
+
+The project currently displays real-time USD exchange rates to EUR, GBP and JPY while exploring how AI technologies can enhance travel budgeting, currency analysis, and trip planning experiences.
 
 ## Features
 
@@ -146,3 +148,64 @@ podman machine start
     ```
     This image is widely used in CI/CD and is generally more reliably publicly accessible.
     Then, try `podman build` again.
+
+## AI Roadmap
+
+This project started as a simple currency exchange application and is evolving toward an AI-assisted travel planning platform.
+
+Currency exchange is often one of the first considerations when planning international travel. Future development aims to combine real-time exchange rate information with AI-powered assistance to help travelers make more informed decisions before and during their journeys.
+
+Planned features include:
+
+- Natural language currency conversion
+- AI-generated exchange rate explanations
+- Travel budget planning across multiple currencies
+- Destination cost comparison
+- Personalized travel recommendations
+- Travel itinerary assistance
+- Travel expense tracking and summarization
+
+The objective is to create a practical and user-friendly tool that helps travelers better understand the financial aspects of international travel.
+
+
+## Built with AI
+
+This project was developed with assistance from OpenAI ChatGPT and Codex.
+
+AI-assisted development was used for:
+
+- Flutter application design
+- UI implementation
+- API integration
+- Containerization using Docker and Podman
+- Troubleshooting and debugging
+- Documentation generation
+
+The repository also serves as an example of how developers can leverage AI-assisted software development tools to accelerate project delivery while maintaining transparency through open-source development.
+
+
+## Open Source Vision
+
+The long-term vision of this repository extends beyond a currency exchange application.
+
+The project aims to become an open-source reference implementation demonstrating how AI technologies can be integrated into Flutter Web applications and cloud-native architectures.
+
+Future exploration areas include:
+
+- OpenAI API integration
+- AI-powered travel planning
+- Intelligent budgeting and cost estimation
+- Cloud-native deployment patterns
+- Developer tutorials and architecture documentation
+- Educational examples for AI-assisted software development
+
+All source code, documentation, and implementation approaches will remain publicly available to support learning, experimentation, and community collaboration.
+
+
+## Why This Project Exists
+
+Many travelers rely on multiple websites and tools to perform currency conversion, estimate trip costs, and plan travel activities.
+
+This project aims to simplify those workflows by combining financial information, travel planning capabilities, and AI-powered assistance into a single open-source platform.
+
+By documenting the architecture, implementation decisions, and lessons learned throughout the development process, the project also provides a practical learning resource for developers interested in Flutter, cloud-native technologies, and AI integration.
