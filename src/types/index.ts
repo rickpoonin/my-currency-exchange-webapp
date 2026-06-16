@@ -22,6 +22,26 @@ export interface ExchangeRateResponse {
   quote: string;
   date: string;
   rate: number;
+  providers?: ExchangeRateProvider[];
+}
+
+export interface ExchangeRateProvider {
+  key: string;
+  rate: number;
+}
+
+export interface ProviderResponse {
+  key: string;
+  name: string;
+  country_code: string | null;
+  rate_type: string | null;
+}
+
+export interface HistoricalRateResponse {
+  base: string;
+  quote: string;
+  date: string;
+  rate: number;
 }
 
 export type Theme = 'light' | 'dark';

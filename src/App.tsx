@@ -15,6 +15,10 @@ function CurrencyApp() {
     amount, setAmount,
     convertedAmount,
     rate,
+    rateDate,
+    providers,
+    providerNamesByKey,
+    historicalRates,
     loading,
     error,
     swapCurrencies,
@@ -44,6 +48,10 @@ function CurrencyApp() {
           amount={amount}
           convertedAmount={convertedAmount}
           rate={rate}
+          rateDate={rateDate}
+          providers={providers}
+          providerNamesByKey={providerNamesByKey}
+          historicalRates={historicalRates}
           loading={loading}
           error={error}
           onFromChange={setFromCurrency}

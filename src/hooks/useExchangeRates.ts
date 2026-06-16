@@ -1,5 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { CurrencyResponse, ExchangeRateResponse } from '../types';
+import type {
+  CurrencyResponse,
+  ExchangeRateProvider,
+  ExchangeRateResponse,
+  HistoricalRateResponse,
+  ProviderResponse,
+} from '../types';
 
 const API_BASE = 'https://api.frankfurter.dev/v2';
 const DEBOUNCE_MS = 500;
@@ -16,6 +22,10 @@ export function useExchangeRates() {
   const [amount, setAmount] = useState<string>('1');
   const [convertedAmount, setConvertedAmount] = useState<number | null>(null);
   const [rate, setRate] = useState<number | null>(null);
+  const [rateDate, setRateDate] = useState<string | null>(null);
+  const [providers, setProviders] = useState<ExchangeRateProvider[]>([]);
+  const [providerNamesByKey, setProviderNamesByKey] = useState<Record<string, string>>({});
+  const [historicalRates, setHistoricalRates] = useState<HistoricalRateResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,6 +53,25 @@ export function useExchangeRates() {
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetch(`${API_BASE}/providers`, { signal: controller.signal })
+      .then(res => {
+        if (!res.ok) throw new Error('Provider list request failed');
+        return res.json() as Promise<ProviderResponse[]>;
+      })
+      .then(data => {
+        setProviderNamesByKey(Object.fromEntries(data.map(provider => [provider.key, provider.name])));
+      })
+      .catch(error => {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        setProviderNamesByKey({});
+      });
+
+    return () => controller.abort();
+  }, []);
+
   // Persist user selections
   useEffect(() => { localStorage.setItem('fromCurrency', fromCurrency); }, [fromCurrency]);
   useEffect(() => { localStorage.setItem('toCurrency', toCurrency); }, [toCurrency]);
@@ -55,6 +84,9 @@ export function useExchangeRates() {
     if (!numAmount || isNaN(numAmount) || fromCurrency === toCurrency) {
       setConvertedAmount(null);
       setRate(null);
+      setRateDate(null);
+      setProviders([]);
+      setHistoricalRates([]);
       setLoading(false);
       return;
     }
@@ -64,16 +96,31 @@ export function useExchangeRates() {
 
     const controller = new AbortController();
     abortRef.current = controller;
+    const endDate = new Date();
+    const startDate = new Date(endDate);
+    startDate.setDate(endDate.getDate() - 29);
+    const toDateParam = endDate.toISOString().slice(0, 10);
+    const fromDateParam = startDate.toISOString().slice(0, 10);
 
-    fetch(`${API_BASE}/rate/${fromCurrency}/${toCurrency}`, { signal: controller.signal })
-      .then(res => {
-        if (!res.ok) throw new Error('API error');
-        return res.json() as Promise<ExchangeRateResponse>;
-      })
-      .then(data => {
+    Promise.all([
+      fetch(`${API_BASE}/rate/${fromCurrency}/${toCurrency}?expand=providers`, { signal: controller.signal })
+        .then(res => {
+          if (!res.ok) throw new Error('API error');
+          return res.json() as Promise<ExchangeRateResponse>;
+        }),
+      fetch(`${API_BASE}/rates?base=${fromCurrency}&quotes=${toCurrency}&from=${fromDateParam}&to=${toDateParam}`, { signal: controller.signal })
+        .then(res => {
+          if (!res.ok) throw new Error('History API error');
+          return res.json() as Promise<HistoricalRateResponse[]>;
+        }),
+    ])
+      .then(([data, history]) => {
         const result = numAmount * data.rate;
         setConvertedAmount(result);
         setRate(data.rate);
+        setRateDate(data.date);
+        setProviders(data.providers ?? []);
+        setHistoricalRates(history);
         setError(null);
       })
       .catch(error => {
@@ -107,6 +154,10 @@ export function useExchangeRates() {
     amount, setAmount,
     convertedAmount,
     rate,
+    rateDate,
+    providers,
+    providerNamesByKey,
+    historicalRates,
     loading,
     error,
     swapCurrencies,

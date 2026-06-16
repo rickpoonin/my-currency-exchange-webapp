@@ -1,9 +1,6 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeftRight, Loader2 } from 'lucide-react';
-
-const flagModules = import.meta.glob('../../assets/flags/*.png', {
-  eager: true,
-  import: 'default',
-}) as Record<string, string>;
+import type { ExchangeRateProvider, HistoricalRateResponse } from '../types';
 
 const CURRENCY_FLAG_CODES: Record<string, string> = {
   AUD: 'au',
@@ -41,7 +38,227 @@ const CURRENCY_FLAG_CODES: Record<string, string> = {
 
 function getFlagSrc(currency: string) {
   const flagCode = CURRENCY_FLAG_CODES[currency];
-  return flagCode ? flagModules[`../../assets/flags/${flagCode}.png`] : undefined;
+  return flagCode ? `/flags/${flagCode}.png` : undefined;
+}
+
+function CurrencyFlag({ currency }: { currency: string }) {
+  const flagSrc = getFlagSrc(currency);
+
+  if (!flagSrc) {
+    return <span className="currency-flag-fallback" aria-hidden="true">{currency.slice(0, 2)}</span>;
+  }
+
+  return <img className="currency-flag" src={flagSrc} alt="" aria-hidden="true" />;
+}
+
+interface CurrencySelectProps {
+  id: string;
+  label: string;
+  currencies: string[];
+  value: string;
+  onChange: (v: string) => void;
+}
+
+function CurrencySelect({ id, label, currencies, value, onChange }: CurrencySelectProps) {
+  const [open, setOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const searchRef = useRef<HTMLInputElement | null>(null);
+  const normalizedSearch = searchTerm.trim().toUpperCase();
+  const filteredCurrencies = normalizedSearch
+    ? currencies.filter(currency => currency.includes(normalizedSearch))
+    : currencies;
+
+  const closeDropdown = useCallback(() => {
+    setOpen(false);
+    setSearchTerm('');
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        closeDropdown();
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [closeDropdown, open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    window.setTimeout(() => searchRef.current?.focus(), 0);
+  }, [open]);
+
+  const handleSelect = (currency: string) => {
+    onChange(currency);
+    closeDropdown();
+  };
+
+  return (
+    <div className="currency-group" ref={rootRef}>
+      <span id={`${id}-label`} className="field-label">{label}</span>
+      <button
+        id={id}
+        type="button"
+        className="currency-select-button"
+        aria-labelledby={`${id}-label ${id}`}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen(current => !current)}
+        onKeyDown={event => {
+          if (event.key === 'Escape') closeDropdown();
+          if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            setOpen(true);
+          }
+          if (/^[a-z0-9]$/i.test(event.key)) {
+            event.preventDefault();
+            setSearchTerm(event.key.toUpperCase());
+            setOpen(true);
+          }
+        }}
+      >
+        <CurrencyFlag currency={value} />
+        <span>{value}</span>
+      </button>
+      {open && (
+        <div className="currency-options-panel">
+          <input
+            ref={searchRef}
+            className="currency-search"
+            value={searchTerm}
+            onChange={event => setSearchTerm(event.target.value.toUpperCase())}
+            onKeyDown={event => {
+              if (event.key === 'Escape') {
+                closeDropdown();
+              }
+              if (event.key === 'Enter' && filteredCurrencies.length > 0) {
+                handleSelect(filteredCurrencies[0]);
+              }
+            }}
+            placeholder="Search currency"
+            aria-label={`Search ${label.toLowerCase()} currency`}
+          />
+          <div className="currency-options" role="listbox" aria-labelledby={`${id}-label`}>
+            {filteredCurrencies.map(currency => (
+              <button
+                key={currency}
+                type="button"
+                className="currency-option"
+                role="option"
+                aria-selected={currency === value}
+                onClick={() => handleSelect(currency)}
+              >
+                <CurrencyFlag currency={currency} />
+                <span>{currency}</span>
+              </button>
+            ))}
+            {filteredCurrencies.length === 0 && (
+              <div className="currency-option-empty">No matching currency</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function buildHistoryPath(points: HistoricalRateResponse[]) {
+  if (points.length === 0) return '';
+
+  const rates = points.map(point => point.rate);
+  const minRate = Math.min(...rates);
+  const maxRate = Math.max(...rates);
+  const range = maxRate - minRate || 1;
+  const width = 300;
+  const height = 90;
+  const xStep = points.length > 1 ? width / (points.length - 1) : width;
+
+  return points
+    .map((point, index) => {
+      const x = index * xStep;
+      const y = height - ((point.rate - minRate) / range) * height;
+      return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
+    })
+    .join(' ');
+}
+
+function RateHistoryChart({
+  historicalRates,
+  fromCurrency,
+  toCurrency,
+}: {
+  historicalRates: HistoricalRateResponse[];
+  fromCurrency: string;
+  toCurrency: string;
+}) {
+  if (historicalRates.length < 2) return null;
+
+  const firstRate = historicalRates[0].rate;
+  const lastRate = historicalRates[historicalRates.length - 1].rate;
+  const variance = ((lastRate - firstRate) / firstRate) * 100;
+  const lowPoint = historicalRates.reduce((lowest, point) => point.rate < lowest.rate ? point : lowest);
+  const highPoint = historicalRates.reduce((highest, point) => point.rate > highest.rate ? point : highest);
+  const path = buildHistoryPath(historicalRates);
+
+  return (
+    <div className="rate-chart" aria-label={`30 day ${fromCurrency} to ${toCurrency} variance chart`}>
+      <div className="rate-chart-header">
+        <span>30-day variance</span>
+        <strong className={variance >= 0 ? 'variance-positive' : 'variance-negative'}>
+          {variance >= 0 ? '+' : ''}{variance.toFixed(2)}%
+        </strong>
+      </div>
+      <svg className="rate-chart-svg" viewBox="0 0 300 90" preserveAspectRatio="none" role="img">
+        <title>{`${fromCurrency} to ${toCurrency} rate over the last 30 days`}</title>
+        <path className="rate-chart-grid" d="M 0 15 H 300 M 0 45 H 300 M 0 75 H 300" />
+        <path className="rate-chart-line" d={path} />
+      </svg>
+      <div className="rate-chart-meta">
+        <span>Low {lowPoint.rate.toFixed(4)} on {lowPoint.date}</span>
+        <span>High {highPoint.rate.toFixed(4)} on {highPoint.date}</span>
+      </div>
+    </div>
+  );
+}
+
+function ProviderTable({
+  providers,
+  providerNamesByKey,
+}: {
+  providers: ExchangeRateProvider[];
+  providerNamesByKey: Record<string, string>;
+}) {
+  if (providers.length === 0) {
+    return <p className="provider-empty">Providers: Not reported</p>;
+  }
+
+  return (
+    <div className="provider-table-wrap" aria-label="Rate providers">
+      <table className="provider-table">
+        <thead>
+          <tr>
+            <th>Provider</th>
+            <th>Code</th>
+            <th>Rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          {providers.map(provider => (
+            <tr key={provider.key}>
+              <td>{providerNamesByKey[provider.key] ?? provider.key}</td>
+              <td>{provider.key}</td>
+              <td>{provider.rate.toFixed(6)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 interface Props {
@@ -51,6 +268,10 @@ interface Props {
   amount: string;
   convertedAmount: number | null;
   rate: number | null;
+  rateDate: string | null;
+  providers: ExchangeRateProvider[];
+  providerNamesByKey: Record<string, string>;
+  historicalRates: HistoricalRateResponse[];
   loading: boolean;
   error: string | null;
   onFromChange: (v: string) => void;
@@ -62,11 +283,10 @@ interface Props {
 
 export function ConverterCard({
   currencies, fromCurrency, toCurrency, amount, convertedAmount, rate,
-  loading, error, onFromChange, onToChange, onAmountChange, onSwap, onAddToHistory,
+  rateDate, providers, providerNamesByKey, historicalRates, loading, error,
+  onFromChange, onToChange, onAmountChange, onSwap, onAddToHistory,
 }: Props) {
   const numAmount = parseFloat(amount) || 0;
-  const fromFlagSrc = getFlagSrc(fromCurrency);
-  const toFlagSrc = getFlagSrc(toCurrency);
 
   const handleConvert = () => {
     if (convertedAmount !== null) onAddToHistory();
@@ -77,25 +297,13 @@ export function ConverterCard({
       <h2 className="card-title">Convert Currency</h2>
 
       <div className="converter-row">
-        {/* From */}
-        <div className="currency-group">
-          <label htmlFor="from-currency-select" className="field-label">From</label>
-          <div className="currency-select-wrap">
-            {fromFlagSrc && (
-              <img className="currency-flag" src={fromFlagSrc} alt="" aria-hidden="true" />
-            )}
-            <select
-              id="from-currency-select"
-              className="currency-select"
-              value={fromCurrency}
-              onChange={e => onFromChange(e.target.value)}
-            >
-              {currencies.map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-        </div>
+        <CurrencySelect
+          id="from-currency-select"
+          label="From"
+          currencies={currencies}
+          value={fromCurrency}
+          onChange={onFromChange}
+        />
 
         {/* Swap */}
         <button
@@ -108,25 +316,13 @@ export function ConverterCard({
           <ArrowLeftRight size={18} />
         </button>
 
-        {/* To */}
-        <div className="currency-group">
-          <label htmlFor="to-currency-select" className="field-label">To</label>
-          <div className="currency-select-wrap">
-            {toFlagSrc && (
-              <img className="currency-flag" src={toFlagSrc} alt="" aria-hidden="true" />
-            )}
-            <select
-              id="to-currency-select"
-              className="currency-select"
-              value={toCurrency}
-              onChange={e => onToChange(e.target.value)}
-            >
-              {currencies.map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-        </div>
+        <CurrencySelect
+          id="to-currency-select"
+          label="To"
+          currencies={currencies}
+          value={toCurrency}
+          onChange={onToChange}
+        />
       </div>
 
       {/* Amount */}
@@ -165,11 +361,21 @@ export function ConverterCard({
                 1 {fromCurrency} = {rate.toFixed(6)} {toCurrency}
               </p>
             )}
+            <p className="result-provider">
+              Rate date: {rateDate ?? 'n/a'}
+            </p>
+            <ProviderTable providers={providers} providerNamesByKey={providerNamesByKey} />
           </>
         ) : (
           <p className="result-placeholder">Enter an amount to see the conversion</p>
         )}
       </div>
+
+      <RateHistoryChart
+        historicalRates={historicalRates}
+        fromCurrency={fromCurrency}
+        toCurrency={toCurrency}
+      />
 
       <button
         id="save-conversion-btn"
