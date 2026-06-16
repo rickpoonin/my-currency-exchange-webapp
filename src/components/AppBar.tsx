@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme } from '../contexts/useTheme';
 import { Sun, Moon } from 'lucide-react';
 
 export function AppBar() {
@@ -30,7 +30,7 @@ export function AppBar() {
         <div className="app-bar-logo">💱</div>
         <div className="app-bar-title">
           <h1>Currency Exchange</h1>
-          <span className="app-bar-subtitle">Live Rates · frankfurter.app</span>
+          <span className="app-bar-subtitle">Live Rates · frankfurter.dev</span>
         </div>
       </div>
       <div className="app-bar-right">

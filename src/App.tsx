@@ -56,8 +56,8 @@ function CurrencyApp() {
       </main>
       <footer className="app-footer">
         Currency Exchange App · Rates provided by{' '}
-        <a href="https://www.frankfurter.app" target="_blank" rel="noopener noreferrer">
-          frankfurter.app
+        <a href="https://frankfurter.dev" target="_blank" rel="noopener noreferrer">
+          frankfurter.dev
         </a>{' '}
         · For informational purposes only
       </footer>

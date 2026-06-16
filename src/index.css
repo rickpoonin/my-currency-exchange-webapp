@@ -184,9 +184,27 @@ body {
   letter-spacing: 0.05em;
 }
 
+.currency-select-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.currency-flag {
+  position: absolute;
+  left: 12px;
+  width: 24px;
+  height: 18px;
+  object-fit: cover;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.08);
+  pointer-events: none;
+  z-index: 1;
+}
+
 .currency-select {
   width: 100%;
-  padding: 10px 12px;
+  padding: 10px 12px 10px 46px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface-alt);

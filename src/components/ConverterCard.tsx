@@ -1,5 +1,49 @@
 import { ArrowLeftRight, Loader2 } from 'lucide-react';
 
+const flagModules = import.meta.glob('../../assets/flags/*.png', {
+  eager: true,
+  import: 'default',
+}) as Record<string, string>;
+
+const CURRENCY_FLAG_CODES: Record<string, string> = {
+  AUD: 'au',
+  BGN: 'bg',
+  BRL: 'br',
+  CAD: 'ca',
+  CHF: 'ch',
+  CNY: 'cn',
+  CZK: 'cz',
+  DKK: 'dk',
+  EUR: 'eu',
+  GBP: 'gb',
+  HKD: 'hk',
+  HUF: 'hu',
+  IDR: 'id',
+  ILS: 'il',
+  INR: 'in',
+  ISK: 'is',
+  JPY: 'jp',
+  KRW: 'kr',
+  MXN: 'mx',
+  MYR: 'my',
+  NOK: 'no',
+  NZD: 'nz',
+  PHP: 'ph',
+  PLN: 'pl',
+  RON: 'ro',
+  SEK: 'se',
+  SGD: 'sg',
+  THB: 'th',
+  TRY: 'tr',
+  USD: 'us',
+  ZAR: 'za',
+};
+
+function getFlagSrc(currency: string) {
+  const flagCode = CURRENCY_FLAG_CODES[currency];
+  return flagCode ? flagModules[`../../assets/flags/${flagCode}.png`] : undefined;
+}
+
 interface Props {
   currencies: string[];
   fromCurrency: string;
@@ -21,6 +65,8 @@ export function ConverterCard({
   loading, error, onFromChange, onToChange, onAmountChange, onSwap, onAddToHistory,
 }: Props) {
   const numAmount = parseFloat(amount) || 0;
+  const fromFlagSrc = getFlagSrc(fromCurrency);
+  const toFlagSrc = getFlagSrc(toCurrency);
 
   const handleConvert = () => {
     if (convertedAmount !== null) onAddToHistory();
@@ -34,16 +80,21 @@ export function ConverterCard({
         {/* From */}
         <div className="currency-group">
           <label htmlFor="from-currency-select" className="field-label">From</label>
-          <select
-            id="from-currency-select"
-            className="currency-select"
-            value={fromCurrency}
-            onChange={e => onFromChange(e.target.value)}
-          >
-            {currencies.map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+          <div className="currency-select-wrap">
+            {fromFlagSrc && (
+              <img className="currency-flag" src={fromFlagSrc} alt="" aria-hidden="true" />
+            )}
+            <select
+              id="from-currency-select"
+              className="currency-select"
+              value={fromCurrency}
+              onChange={e => onFromChange(e.target.value)}
+            >
+              {currencies.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Swap */}
@@ -60,16 +111,21 @@ export function ConverterCard({
         {/* To */}
         <div className="currency-group">
           <label htmlFor="to-currency-select" className="field-label">To</label>
-          <select
-            id="to-currency-select"
-            className="currency-select"
-            value={toCurrency}
-            onChange={e => onToChange(e.target.value)}
-          >
-            {currencies.map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+          <div className="currency-select-wrap">
+            {toFlagSrc && (
+              <img className="currency-flag" src={toFlagSrc} alt="" aria-hidden="true" />
+            )}
+            <select
+              id="to-currency-select"
+              className="currency-select"
+              value={toCurrency}
+              onChange={e => onToChange(e.target.value)}
+            >
+              {currencies.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -125,7 +181,7 @@ export function ConverterCard({
       </button>
 
       <p className="disclaimer">
-        ⚠️ Rates are for informational purposes only. Source: frankfurter.app
+        ⚠️ Rates are for informational purposes only. Source: frankfurter.dev
       </p>
     </section>
   );
