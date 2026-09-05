@@ -2,6 +2,16 @@
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
+## Rate-source configuration
+
+The converter includes Frankfurter, the Hong Kong Monetary Authority (HKMA), and the Census and Statistics Department (C&SD). HKMA permits direct browser requests. C&SD does not, so production hosting must expose a same-origin reverse proxy for its C&SD endpoint and set:
+
+```text
+VITE_CENSTATD_RATES_URL=/api/censtatd
+```
+
+The Vite development server provides `/api/censtatd` automatically. The proxy must fetch only the fixed official URL `https://www.censtatd.gov.hk/api/get.php?id=340-46001&lang=en&full_series=1` and should return its JSON response unchanged.
+
 Currently, two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)

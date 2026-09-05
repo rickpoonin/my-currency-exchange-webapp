@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react';
 import { useTheme } from '../contexts/useTheme';
 import { Sun, Moon } from 'lucide-react';
 
-export function AppBar() {
+interface Props {
+  sourceLabel: string;
+}
+
+export function AppBar({ sourceLabel }: Props) {
   const { theme, toggleTheme } = useTheme();
   const [time, setTime] = useState(() => new Date());
 
@@ -30,7 +34,7 @@ export function AppBar() {
         <div className="app-bar-logo">💱</div>
         <div className="app-bar-title">
           <h1>Currency Exchange</h1>
-          <span className="app-bar-subtitle">Live Rates · frankfurter.dev</span>
+          <span className="app-bar-subtitle">Rate source · {sourceLabel}</span>
         </div>
       </div>
       <div className="app-bar-right">

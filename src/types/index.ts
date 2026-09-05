@@ -44,4 +44,23 @@ export interface HistoricalRateResponse {
   rate: number;
 }
 
+export type RateSource = 'all' | 'frankfurter' | 'hkma' | 'censtatd';
+export type IndividualRateSource = Exclude<RateSource, 'all'>;
+
+export interface RateSourceOption {
+  id: RateSource;
+  label: string;
+  description: string;
+  url: string;
+  historyLabel: string;
+}
+
+export interface SourceRateResult {
+  source: IndividualRateSource;
+  label: string;
+  rate?: number;
+  date?: string;
+  error?: string;
+}
+
 export type Theme = 'light' | 'dark';

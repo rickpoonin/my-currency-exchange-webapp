@@ -10,6 +10,9 @@ import './index.css';
 function CurrencyApp() {
   const {
     currencies,
+    rateSource,
+    rateSources,
+    setRateSource,
     fromCurrency, setFromCurrency,
     toCurrency, setToCurrency,
     amount, setAmount,
@@ -19,10 +22,19 @@ function CurrencyApp() {
     providers,
     providerNamesByKey,
     historicalRates,
+    sourceRates,
     loading,
     error,
     swapCurrencies,
   } = useExchangeRates();
+  const activeSource = rateSources.find(source => source.id === rateSource) ?? rateSources[0];
+  const referenceSource = sourceRates.find(sourceRate => sourceRate.rate !== undefined);
+  const referenceHistoryLabel = referenceSource
+    ? rateSources.find(source => source.id === referenceSource.source)?.historyLabel
+    : undefined;
+  const historyLabel = rateSource === 'all' && referenceSource && referenceHistoryLabel
+    ? `${referenceSource.label} ${referenceHistoryLabel}`
+    : activeSource.historyLabel;
 
   const { history, addEntry, clearHistory } = useHistory();
 
@@ -39,10 +51,12 @@ function CurrencyApp() {
 
   return (
     <div className="app-wrapper">
-      <AppBar />
+      <AppBar sourceLabel={activeSource.label} />
       <main className="main-content">
         <ConverterCard
           currencies={currencies}
+          rateSource={rateSource}
+          rateSources={rateSources}
           fromCurrency={fromCurrency}
           toCurrency={toCurrency}
           amount={amount}
@@ -52,10 +66,13 @@ function CurrencyApp() {
           providers={providers}
           providerNamesByKey={providerNamesByKey}
           historicalRates={historicalRates}
+          sourceRates={sourceRates}
+          historyLabel={historyLabel}
           loading={loading}
           error={error}
           onFromChange={setFromCurrency}
           onToChange={setToCurrency}
+          onRateSourceChange={setRateSource}
           onAmountChange={setAmount}
           onSwap={swapCurrencies}
           onAddToHistory={handleSaveToHistory}
@@ -63,10 +80,7 @@ function CurrencyApp() {
         <HistoryPanel history={history} onClear={clearHistory} />
       </main>
       <footer className="app-footer">
-        Currency Exchange App · Rates provided by{' '}
-        <a href="https://frankfurter.dev" target="_blank" rel="noopener noreferrer">
-          frankfurter.dev
-        </a>{' '}
+        Currency Exchange App · {rateSource === 'all' ? 'Comparing available rate sources' : <>Rates provided by{' '}<a href={activeSource.url} target="_blank" rel="noopener noreferrer">{activeSource.label}</a></>}{' '}
         · For informational purposes only
       </footer>
     </div>

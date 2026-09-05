@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeftRight, Loader2 } from 'lucide-react';
-import type { ExchangeRateProvider, HistoricalRateResponse } from '../types';
+import type { ExchangeRateProvider, HistoricalRateResponse, RateSource, RateSourceOption, SourceRateResult } from '../types';
 
 const CURRENCY_FLAG_CODES: Record<string, string> = {
   AUD: 'au',
@@ -191,10 +191,12 @@ function RateHistoryChart({
   historicalRates,
   fromCurrency,
   toCurrency,
+  historyLabel,
 }: {
   historicalRates: HistoricalRateResponse[];
   fromCurrency: string;
   toCurrency: string;
+  historyLabel: string;
 }) {
   if (historicalRates.length < 2) return null;
 
@@ -206,15 +208,15 @@ function RateHistoryChart({
   const path = buildHistoryPath(historicalRates);
 
   return (
-    <div className="rate-chart" aria-label={`30 day ${fromCurrency} to ${toCurrency} variance chart`}>
+    <div className="rate-chart" aria-label={`${historyLabel} ${fromCurrency} to ${toCurrency} variance chart`}>
       <div className="rate-chart-header">
-        <span>30-day variance</span>
+        <span>{historyLabel} variance</span>
         <strong className={variance >= 0 ? 'variance-positive' : 'variance-negative'}>
           {variance >= 0 ? '+' : ''}{variance.toFixed(2)}%
         </strong>
       </div>
       <svg className="rate-chart-svg" viewBox="0 0 300 90" preserveAspectRatio="none" role="img">
-        <title>{`${fromCurrency} to ${toCurrency} rate over the last 30 days`}</title>
+        <title>{`${fromCurrency} to ${toCurrency} rate over the last ${historyLabel}`}</title>
         <path className="rate-chart-grid" d="M 0 15 H 300 M 0 45 H 300 M 0 75 H 300" />
         <path className="rate-chart-line" d={path} />
       </svg>
@@ -261,8 +263,44 @@ function ProviderTable({
   );
 }
 
+function SourceComparison({ sourceRates }: { sourceRates: SourceRateResult[] }) {
+  if (sourceRates.length === 0) return null;
+
+  return (
+    <div className="source-comparison" aria-label="Rate-source comparison">
+      <p className="source-comparison-title">Source comparison</p>
+      <table className="source-comparison-table">
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>Rate</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sourceRates.map(sourceRate => (
+            <tr key={sourceRate.source}>
+              <td>{sourceRate.label}</td>
+              {sourceRate.rate === undefined ? (
+                <td colSpan={2} className="source-comparison-unavailable">Unavailable: {sourceRate.error}</td>
+              ) : (
+                <>
+                  <td>{sourceRate.rate.toFixed(6)}</td>
+                  <td>{sourceRate.date}</td>
+                </>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 interface Props {
   currencies: string[];
+  rateSource: RateSource;
+  rateSources: RateSourceOption[];
   fromCurrency: string;
   toCurrency: string;
   amount: string;
@@ -272,21 +310,25 @@ interface Props {
   providers: ExchangeRateProvider[];
   providerNamesByKey: Record<string, string>;
   historicalRates: HistoricalRateResponse[];
+  sourceRates: SourceRateResult[];
+  historyLabel: string;
   loading: boolean;
   error: string | null;
   onFromChange: (v: string) => void;
   onToChange: (v: string) => void;
+  onRateSourceChange: (source: RateSource) => void;
   onAmountChange: (v: string) => void;
   onSwap: () => void;
   onAddToHistory: () => void;
 }
 
 export function ConverterCard({
-  currencies, fromCurrency, toCurrency, amount, convertedAmount, rate,
-  rateDate, providers, providerNamesByKey, historicalRates, loading, error,
-  onFromChange, onToChange, onAmountChange, onSwap, onAddToHistory,
+  currencies, rateSource, rateSources, fromCurrency, toCurrency, amount, convertedAmount, rate,
+  rateDate, providers, providerNamesByKey, historicalRates, sourceRates, historyLabel, loading, error,
+  onFromChange, onToChange, onRateSourceChange, onAmountChange, onSwap, onAddToHistory,
 }: Props) {
   const numAmount = parseFloat(amount) || 0;
+  const activeSource = rateSources.find(source => source.id === rateSource) ?? rateSources[0];
 
   const handleConvert = () => {
     if (convertedAmount !== null) onAddToHistory();
@@ -295,6 +337,19 @@ export function ConverterCard({
   return (
     <section className="card converter-card" aria-label="Currency Converter">
       <h2 className="card-title">Convert Currency</h2>
+
+      <div className="source-group">
+        <label className="field-label" htmlFor="rate-source-select">Rate source</label>
+        <select
+          id="rate-source-select"
+          className="rate-source-select"
+          value={rateSource}
+          onChange={event => onRateSourceChange(event.target.value as RateSource)}
+        >
+          {rateSources.map(source => <option key={source.id} value={source.id}>{source.label}</option>)}
+        </select>
+        <p className="source-description">{activeSource.description}</p>
+      </div>
 
       <div className="converter-row">
         <CurrencySelect
@@ -362,9 +417,11 @@ export function ConverterCard({
               </p>
             )}
             <p className="result-provider">
-              Rate date: {rateDate ?? 'n/a'}
+              {rateSource === 'all' ? 'Reference amount: ' : 'Rate date: '}{rateDate ?? 'n/a'}
             </p>
-            <ProviderTable providers={providers} providerNamesByKey={providerNamesByKey} />
+            {rateSource === 'all'
+              ? <SourceComparison sourceRates={sourceRates} />
+              : <ProviderTable providers={providers} providerNamesByKey={providerNamesByKey} />}
           </>
         ) : (
           <p className="result-placeholder">Enter an amount to see the conversion</p>
@@ -375,6 +432,7 @@ export function ConverterCard({
         historicalRates={historicalRates}
         fromCurrency={fromCurrency}
         toCurrency={toCurrency}
+        historyLabel={historyLabel}
       />
 
       <button
@@ -387,7 +445,7 @@ export function ConverterCard({
       </button>
 
       <p className="disclaimer">
-        ⚠️ Rates are for informational purposes only. Source: frankfurter.dev
+        Rates are for informational purposes only. {rateSource === 'all' ? 'All available sources are shown.' : `Source: ${activeSource.label}`}
       </p>
     </section>
   );
